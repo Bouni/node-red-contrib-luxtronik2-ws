@@ -1,0 +1,69 @@
+<!--
+  Copyright 2017 Bouni
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!-- Luxtronik2 config -->
+<script type="text/javascript">
+    RED.nodes.registerType('Luxtronik2',{
+        category: 'Luxtronik2',
+        color: '#BBB',
+        defaults: {
+            host: {value:"", required:true, validate: function(val) {
+                    return val.match(/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/);
+                }
+            },
+            port: {value:8214, required:true, validate:function(val){
+                    var port = parseInt(val);
+                    return (port > 0) && (port < 0x10000);
+                }
+            },
+            password: {required:true, validate:function(val){
+                    return val.match(/^[0-9]{6}$/);
+                }
+            }
+        },
+        inputs:1,
+        outputs:1,
+        icon: "luxtronik2.png",
+        label: function() {
+            return "Luxtronik2";
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="Luxtronik2">
+    <h4>Connection settings</h4>
+    <div class="form-row">
+        <label for="node-input-host"><i class="icon-bookmark"></i> Host</label>
+        <input type="text" id="node-input-host">
+    </div>
+    <div class="form-row">
+        <label for="node-input-port"><i class="icon-bookmark"></i> Port</label>
+        <input type="text" id="node-input-port">
+    </div>
+    <div class="form-row">
+        <label for="node-input-password"><i class="icon-bookmark"></i> Password</label>
+        <input type="text" id="node-input-password">
+    </div>
+    <p>
+        Luxtronik2 controllers as of firmware version V3.81 support websockets on port 8214.
+    </p>
+</script>
+
+<script type="text/x-red" data-help-name="Luxtronik2">
+    <p>Connects to a Luxtronik2 heat pump controller and receives data from it, which then gets parsed.
+        The query gets triggered by any input.
+    </p> 
+</script>

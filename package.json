@@ -1,0 +1,24 @@
+{
+  "name": "node-red-contrib-luxtronik2-ws",
+  "version": "0.0.1",
+  "description": "Luxtronik2 Node for Node Red using Websockets for data exchange",
+  "licence":"MIT",
+  "dependencies": {
+    "ws": "latest",
+    "xml2js": "^0.4.17"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bouni/node-red-contrib-luxtronik2-ws.git"
+  },
+  "keywords": [
+    "node-red",
+    "Luxtronik2",
+    "websockets"
+  ],
+  "node-red": {
+    "nodes": {
+      "Luxtronik2": "luxtronik2-ws.js"
+    }
+  }
+}
