@@ -94,6 +94,7 @@ module.exports = function(RED) {
                 node.count--;
                 
                 if(node.count == 0) {
+                    node.ws.terminate();
                     callback();
                 }
             } 
