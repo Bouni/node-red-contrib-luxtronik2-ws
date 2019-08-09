@@ -35,8 +35,13 @@ module.exports = function(RED) {
 
         node.ws.on('open', function open() {
             node.status({fill:"green",shape:"dot",text:"connected"});
-            node.ws.send(login);
-            node.ws.send("REFRESH");
+
+            try {
+                node.ws.send(login);
+                node.ws.send("REFRESH");
+            } catch (e) {
+                ws.close();
+            }
         });
         
         node.ws.on('message', function (data, flags) {
