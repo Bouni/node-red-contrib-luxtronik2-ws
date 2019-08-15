@@ -69,10 +69,14 @@ module.exports = function(RED) {
                 // Reply to the REFRESH command, gives us the structure but no actual data
                 for(var i in json.Navigation.item) {
                     var name = json.Navigation.item[i].name[0];
-                    var id = json.Navigation.item[i].$.id;
-                    msg.payload[name] = {};
-                    node.ws.send('GET;'+id);
-                    node.count++;
+                    if (name == 'Access: User') {
+                        node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
+                    } else {
+                        var id = json.Navigation.item[i].$.id;
+                        msg.payload[name] = {};
+                        node.ws.send('GET;'+id);
+                        node.count++;
+                    }
                 }
 
             } else {
