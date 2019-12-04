@@ -81,23 +81,25 @@ module.exports = function(RED) {
 
             } else {
                 // Replys to the GET;<id> commands that get us the actual data
-                var rootname = json.Content.name[0];
-                if(rootname) {
-                    for(var j in json.Content.item) {
-                        var group = json.Content.item[j].name[0];
-                        node.status({fill:"green",shape:"dot",text:"process "+group});
-                        msg.payload[rootname][group] = {};
-                        if ('raw' in json.Content.item[j]) {
-                            var name = json.Content.item[j].name;
-                            var value = json.Content.item[j].value;
-                            msg.payload[rootname][group] = value[0];
-                        } else if('item' in json.Content.item[j]) {
-                            for(var k in json.Content.item[j].item) {
-                                var name = json.Content.item[j].item[k].name;
-                                var value = json.Content.item[j].item[k].value;
-                                msg.payload[rootname][group][name] = value[0];
-                            }
-                        } 
+                if (json.Content.name) {
+                    var rootname = json.Content.name[0];
+                    if(rootname) {
+                        for(var j in json.Content.item) {
+                            var group = json.Content.item[j].name[0];
+                            node.status({fill:"green",shape:"dot",text:"process "+group});
+                            msg.payload[rootname][group] = {};
+                            if ('raw' in json.Content.item[j]) {
+                                var name = json.Content.item[j].name;
+                                var value = json.Content.item[j].value;
+                                msg.payload[rootname][group] = value[0];
+                            } else if('item' in json.Content.item[j]) {
+                                for(var k in json.Content.item[j].item) {
+                                    var name = json.Content.item[j].item[k].name;
+                                    var value = json.Content.item[j].item[k].value;
+                                    msg.payload[rootname][group][name] = value[0];
+                                }
+                            } 
+                        }
                     }
                 }
                 node.count--;
