@@ -1,6 +1,8 @@
 node-red-contrib-luxtronik2-ws
 ========================
 
+**Warning: this repo is no longer maintained!**
+
 [Node-RED][1] contribution package for [Luxtronik2][2] heat pump controllers running firmware version  >= 3.81.
 
 # Install
