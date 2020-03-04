@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-luxtronik2-ws",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Luxtronik2 Node for Node Red using Websockets for data exchange",
   "author":"bouni",
   "licence":"MIT",
