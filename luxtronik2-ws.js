@@ -30,6 +30,29 @@ module.exports = function(RED) {
         
         node.ws = new WebSocket(uri, 'Lux_WS');
 
+        node.topic_parent = '';
+        node.topic_child  = '';
+        node.topic_value  = '';
+        node.topic = {};
+
+        if('topic' in msg){
+            if(msg.topic != '' && msg.topic.toString().includes('/')){
+                node.topic        = msg.topic.toString().split('/');
+                if(node.topic.length == 2){ // e.g. Betriebsart/Heizkreis
+                    node.topic_parent = node.topic[0];
+                    node.topic_child  = node.topic[1];
+                    if('payload' in msg){
+                        node.topic_value = msg.payload.toString();
+                    }
+                }else{
+                    node.topic_value  = '';
+                    node.topic_parent = '';
+                    node.topic_child  = '';
+                    msg.topic = 'Invalid Input message, use: topic: Betriebsart/Heizkreis payload:TARGETVALUE';
+                }
+            }
+        }
+        
         msg.payload = {};
         node.count = 0;
 
@@ -69,9 +92,13 @@ module.exports = function(RED) {
                 // Reply to the REFRESH command, gives us the structure but no actual data
                 for(var i in json.Navigation.item) {
                     var name = json.Navigation.item[i].name[0];
-                    if (name == 'Access: User') {
+                    if (name == 'Zugang: Benutzer') {
                         node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
-                    } else {
+                    } else if (name == 'Zeitschaltprogramm') {
+                        node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
+                    } else if (name == 'Fernsteuerung') {
+                        node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
+                    } else{
                         var id = json.Navigation.item[i].$.id;
                         msg.payload[name] = {};
                         node.ws.send('GET;'+id);
@@ -81,24 +108,47 @@ module.exports = function(RED) {
 
             } else {
                 // Replys to the GET;<id> commands that get us the actual data
-                if (json.Content.name) {
+                if (!(json.Content.name)) {
+                    // fallback if rootname is not mentioned
+                    var rootname = "Einstellungen"
+                }else{
                     var rootname = json.Content.name[0];
-                    if(rootname) {
-                        for(var j in json.Content.item) {
-                            var group = json.Content.item[j].name[0];
-                            node.status({fill:"green",shape:"dot",text:"process "+group});
-                            msg.payload[rootname][group] = {};
-                            if ('raw' in json.Content.item[j]) {
-                                var name = json.Content.item[j].name;
-                                var value = json.Content.item[j].value;
-                                msg.payload[rootname][group] = value[0];
-                            } else if('item' in json.Content.item[j]) {
-                                for(var k in json.Content.item[j].item) {
-                                    var name = json.Content.item[j].item[k].name;
-                                    var value = json.Content.item[j].item[k].value;
-                                    msg.payload[rootname][group][name] = value[0];
-                                }
-                            } 
+                }
+                
+                for(var j in json.Content.item) {
+                    var group = json.Content.item[j].name[0];
+                    node.status({fill:"green",shape:"dot",text:"process "+group});
+                    msg.payload[rootname][group] = {};
+                    if ('raw' in json.Content.item[j]) {
+                        var name = json.Content.item[j].name;
+                        var value = json.Content.item[j].value;
+                        msg.payload[rootname][group] = value[0];
+                    } else if('item' in json.Content.item[j]) {
+                        for(var k in json.Content.item[j].item) {
+                            var name = json.Content.item[j].item[k].name;
+                            var value = json.Content.item[j].item[k].value;
+                            msg.payload[rootname][group][name] = value[0];
+
+                            // Send SET values SET;set_targetid;value
+                            if(   json.Content.item[j].name.toString().includes(node.topic_parent)
+                                && json.Content.item[j].item[k].name.toString().includes(node.topic_child)
+                                && (node.topic_value != '')){
+
+                                msg.topic = msg.topic + ' -> ' + node.topic_value;
+
+                                node.ws.send('SET;set_' + json.Content.item[j].item[k].$.id + ';' + node.topic_value);                
+                                node.topic_parent = '';
+                                node.topic_child  = '';
+                                node.topic        = '';
+                                node.topic_value  = '';
+                                node.ws.send('SAVE;1');
+                            }
+
+                            // Output XML structure with RAW values
+                            if(node.topic_parent.includes('INFO') || node.topic_child.includes('INFO')){
+                                //msg.payload['INFO'][json.Content.item[j].name.toString()] = data;
+                                //msg.payload['INFO'][json.Content.item[j].name.toString()] = data;
+                            }
                         }
                     }
                 }
