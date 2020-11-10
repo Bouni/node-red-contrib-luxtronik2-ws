@@ -109,7 +109,7 @@ module.exports = function(RED) {
             } else {
                 // Replys to the GET;<id> commands that get us the actual data
                 if (!(json.Content.name)) {
-                    // fallback if rootname is not mentioned
+                    // fallback if rootname is not received data
                     var rootname = "Einstellungen"
                 }else{
                     var rootname = json.Content.name[0];
