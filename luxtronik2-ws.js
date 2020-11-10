@@ -114,11 +114,17 @@ module.exports = function(RED) {
                 }else{
                     var rootname = json.Content.name[0];
                 }
-                
+
+                // Output XML structure with RAW values
+                if(node.topic_parent.includes('INFO') || node.topic_child.includes('INFO')){
+                    msg.payload['INFO - '+rootname] = json.Content;
+                }
+
                 for(var j in json.Content.item) {
                     var group = json.Content.item[j].name[0];
                     node.status({fill:"green",shape:"dot",text:"process "+group});
                     msg.payload[rootname][group] = {};
+
                     if ('raw' in json.Content.item[j]) {
                         var name = json.Content.item[j].name;
                         var value = json.Content.item[j].value;
@@ -136,30 +142,24 @@ module.exports = function(RED) {
 
                                 msg.topic = msg.topic + ' -> ' + node.topic_value;
 
-                                node.ws.send('SET;set_' + json.Content.item[j].item[k].$.id + ';' + node.topic_value);                
+                                node.ws.send('SET;set_' + json.Content.item[j].item[k].$.id + ';' + node.topic_value);
                                 node.topic_parent = '';
                                 node.topic_child  = '';
                                 node.topic        = '';
                                 node.topic_value  = '';
                                 node.ws.send('SAVE;1');
                             }
-
-                            // Output XML structure with RAW values
-                            if(node.topic_parent.includes('INFO') || node.topic_child.includes('INFO')){
-                                //msg.payload['INFO'][json.Content.item[j].name.toString()] = data;
-                                //msg.payload['INFO'][json.Content.item[j].name.toString()] = data;
-                            }
                         }
                     }
                 }
                 node.count--;
-                
+
                 if(node.count == 0) {
                     node.ws.terminate();
                     callback();
                 }
-            } 
-            
+            }
+
         });
     }
 
