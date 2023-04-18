@@ -1,7 +1,7 @@
 /**
 * 
 * This node red node reads the data from a Luxtronik2 heat pump controller and parses the data.
-* It uses the new (as of version 3.81 afaik) websocket interface.
+* It uses the new (as of version 3.88.00) websocket interface.
 * 
 * Copyright 2017 Bouni
 *
@@ -30,6 +30,29 @@ module.exports = function(RED) {
         
         node.ws = new WebSocket(uri, 'Lux_WS');
 
+        node.topic_parent = '';
+        node.topic_child  = '';
+        node.topic_value  = '';
+        node.topic = {};
+
+        if('topic' in msg){
+            if(msg.topic != '' && msg.topic.toString().includes('/')){
+                node.topic        = msg.topic.toString().split('/');
+                if(node.topic.length == 2){ // e.g. Betriebsart/Heizkreis
+                    node.topic_parent = node.topic[0];
+                    node.topic_child  = node.topic[1];
+                    if('payload' in msg){
+                        node.topic_value = msg.payload.toString();
+                    }
+                }else{
+                    node.topic_value  = '';
+                    node.topic_parent = '';
+                    node.topic_child  = '';
+                    msg.topic = 'Invalid Input message, use: topic: Betriebsart/Heizkreis payload:TARGETVALUE';
+                }
+            }
+        }
+        
         msg.payload = {};
         node.count = 0;
 
@@ -69,9 +92,12 @@ module.exports = function(RED) {
                 // Reply to the REFRESH command, gives us the structure but no actual data
                 for(var i in json.Navigation.item) {
                     var name = json.Navigation.item[i].name[0];
-                    if (name == 'Access: User') {
+                    if (name == 'Zugang: Benutzer' || 
+                        name == 'Access: User' || 
+                        name == 'Zeitschaltprogramm' || 
+                        name == 'Fernsteuerung') {
                         node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
-                    } else {
+                    } else{
                         var id = json.Navigation.item[i].$.id;
                         msg.payload[name] = {};
                         node.ws.send('GET;'+id);
@@ -81,35 +107,77 @@ module.exports = function(RED) {
 
             } else {
                 // Replys to the GET;<id> commands that get us the actual data
-                if (json.Content.name) {
+                if (!(json.Content.name)) {
+                    // fallback if rootname is not received data
+                    var rootname = "Einstellungen" // TODO: Change to "Settings"
+                }else{
                     var rootname = json.Content.name[0];
-                    if(rootname) {
-                        for(var j in json.Content.item) {
-                            var group = json.Content.item[j].name[0];
-                            node.status({fill:"green",shape:"dot",text:"process "+group});
-                            msg.payload[rootname][group] = {};
-                            if ('raw' in json.Content.item[j]) {
-                                var name = json.Content.item[j].name;
-                                var value = json.Content.item[j].value;
-                                msg.payload[rootname][group] = value[0];
-                            } else if('item' in json.Content.item[j]) {
-                                for(var k in json.Content.item[j].item) {
-                                    var name = json.Content.item[j].item[k].name;
-                                    var value = json.Content.item[j].item[k].value;
-                                    msg.payload[rootname][group][name] = value[0];
+                }
+
+                // Output XML structure with RAW values
+                if(node.topic_parent.includes('INFO') || node.topic_child.includes('INFO')){
+                    msg.payload['INFO - '+rootname] = json.Content;
+                }
+
+                for(var j in json.Content.item) {
+                    var group = json.Content.item[j].name[0];
+                    node.status({fill:"green",shape:"dot",text:"process "+group});
+                    msg.payload[rootname][group] = {};
+
+                    if ('raw' in json.Content.item[j]) {
+                        var name = json.Content.item[j].name;
+                        var value = json.Content.item[j].value;
+                        try {
+                            msg.payload[rootname][group][name] = value[0];
+                        } catch(err){
+                            msg.payload[rootname][group][name] = value;
+                        }
+                    } else if('item' in json.Content.item[j]) {
+                        for(var k in json.Content.item[j].item) {
+                            var name = json.Content.item[j].item[k].name;
+                            var value = json.Content.item[j].item[k].value;
+                            if(typeof value === 'object') {
+                               msg.payload[rootname][group][name] = value[0];
+                            }
+                            if('item' in json.Content.item[j].item[k]) {
+                                var group2 = json.Content.item[j].item[k].name[0];
+                                node.status({fill:"green",shape:"dot",text:"process "+group2});
+                                msg.payload[rootname][group2] = {};
+                                delete msg.payload[rootname][group];
+                                for(var l in json.Content.item[j].item[k].item) {
+                                    var name = json.Content.item[j].item[k].item[l].name;
+                                    var value = json.Content.item[j].item[k].item[l].value;
+                                    if(typeof value === 'object') {
+                                        msg.payload[rootname][group2][name] = value[0];
+                                    }
                                 }
-                            } 
+                            }
+
+                            // Send SET values SET;set_targetid;value
+                            if(   json.Content.item[j].name.toString().includes(node.topic_parent)
+                                && json.Content.item[j].item[k].name.toString().includes(node.topic_child)
+                                && (node.topic_value != '')){
+
+                                msg.topic = msg.topic + ' -> ' + node.topic_value;
+
+                                node.ws.send('SET;set_' + json.Content.item[j].item[k].$.id + ';' + node.topic_value);
+                                node.topic_parent = '';
+                                node.topic_child  = '';
+                                node.topic        = '';
+                                node.topic_value  = '';
+                                node.ws.send('SAVE;1');
+                            }
                         }
                     }
                 }
                 node.count--;
-                
+
                 if(node.count == 0) {
                     node.ws.terminate();
                     callback();
                 }
-            } 
-            
+            }
+
         });
     }
 
