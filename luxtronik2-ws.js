@@ -136,11 +136,21 @@ module.exports = function(RED) {
                         for(var k in json.Content.item[j].item) {
                             var name = json.Content.item[j].item[k].name;
                             var value = json.Content.item[j].item[k].value;
-                            // required since v3.88.00 - Energy monitor data node contains no information --> value = undefined
-                            try {
-                                msg.payload[rootname][group][name] = value[0];
-                            } catch(err){
-                                msg.payload[rootname][group][name] = value;
+                            if(typeof value === 'object') {
+                               msg.payload[rootname][group][name] = value[0];
+                            }
+                            if('item' in json.Content.item[j].item[k]) {
+                                var group2 = json.Content.item[j].item[k].name[0];
+                                node.status({fill:"green",shape:"dot",text:"process "+group2});
+                                msg.payload[rootname][group2] = {};
+                                delete msg.payload[rootname][group];
+                                for(var l in json.Content.item[j].item[k].item) {
+                                    var name = json.Content.item[j].item[k].item[l].name;
+                                    var value = json.Content.item[j].item[k].item[l].value;
+                                    if(typeof value === 'object') {
+                                        msg.payload[rootname][group2][name] = value[0];
+                                    }
+                                }
                             }
 
                             // Send SET values SET;set_targetid;value
