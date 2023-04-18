@@ -3,8 +3,7 @@
 * This node red node reads the data from a Luxtronik2 heat pump controller and parses the data.
 * It uses the new (as of version 3.88.00) websocket interface.
 * 
-* Copyright 2017 Bouni, updated by rafichris in 2023
-* 
+* Copyright 2017 Bouni
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
