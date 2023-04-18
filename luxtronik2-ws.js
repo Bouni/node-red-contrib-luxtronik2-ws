@@ -1,9 +1,10 @@
 /**
 * 
 * This node red node reads the data from a Luxtronik2 heat pump controller and parses the data.
-* It uses the new (as of version 3.81 afaik) websocket interface.
+* It uses the new (as of version 3.88.00) websocket interface.
 * 
-* Copyright 2017 Bouni
+* Copyright 2017 Bouni, updated by rafichris in 2023
+* 
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -92,11 +93,10 @@ module.exports = function(RED) {
                 // Reply to the REFRESH command, gives us the structure but no actual data
                 for(var i in json.Navigation.item) {
                     var name = json.Navigation.item[i].name[0];
-                    if (name == 'Zugang: Benutzer') {
-                        node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
-                    } else if (name == 'Zeitschaltprogramm') {
-                        node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
-                    } else if (name == 'Fernsteuerung') {
+                    if (name == 'Zugang: Benutzer' || 
+                        name == 'Access: User' || 
+                        name == 'Zeitschaltprogramm' || 
+                        name == 'Fernsteuerung') {
                         node.status({fill:"green",shape:"dot",text:"Skipping: "+name});
                     } else{
                         var id = json.Navigation.item[i].$.id;
@@ -110,7 +110,7 @@ module.exports = function(RED) {
                 // Replys to the GET;<id> commands that get us the actual data
                 if (!(json.Content.name)) {
                     // fallback if rootname is not received data
-                    var rootname = "Einstellungen"
+                    var rootname = "Einstellungen" // TODO: Change to "Settings"
                 }else{
                     var rootname = json.Content.name[0];
                 }
@@ -128,12 +128,21 @@ module.exports = function(RED) {
                     if ('raw' in json.Content.item[j]) {
                         var name = json.Content.item[j].name;
                         var value = json.Content.item[j].value;
-                        msg.payload[rootname][group] = value[0];
+                        try {
+                            msg.payload[rootname][group][name] = value[0];
+                        } catch(err){
+                            msg.payload[rootname][group][name] = value;
+                        }
                     } else if('item' in json.Content.item[j]) {
                         for(var k in json.Content.item[j].item) {
                             var name = json.Content.item[j].item[k].name;
                             var value = json.Content.item[j].item[k].value;
-                            msg.payload[rootname][group][name] = value[0];
+                            // required since v3.88.00 - Energy monitor data node contains no information --> value = undefined
+                            try {
+                                msg.payload[rootname][group][name] = value[0];
+                            } catch(err){
+                                msg.payload[rootname][group][name] = value;
+                            }
 
                             // Send SET values SET;set_targetid;value
                             if(   json.Content.item[j].name.toString().includes(node.topic_parent)
